@@ -24,9 +24,15 @@ async def upload_file(file: UploadFile = File(...)) -> List[Dict]:
             df = pd.read_excel(tmp_path)
             bookings = []
             for _, row in df.iterrows():
+                number_of_guests = (
+                    int(row["Adulti"]) if not pd.isna(row.get("Adulti"))
+                    else int(row["Persone"]) if not pd.isna(row.get("Persone"))
+                    else None
+                )
+
                 bookings.append({
                     "date": pd.to_datetime(row["Arrivo"]).strftime("%Y-%m-%d") if not pd.isna(row["Arrivo"]) else None,
-                    "numberOfGuests": int(row["Adulti"]) if not pd.isna(row["Adulti"]) else 0,
+                    "numberOfGuests": number_of_guests,
                     "numberOfNights": int(row["Durata (notti)"]) if not pd.isna(row["Durata (notti)"]) else 0
                 })
             return bookings

@@ -37,3 +37,7 @@ async def upload_file(file: UploadFile = File(...)) -> List[Dict]:
             return bookings
         finally:
             os.unlink(tmp_path)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}

@@ -1,5 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from typing import List, Dict
 import pandas as pd
 import tempfile
@@ -7,25 +6,22 @@ import os
 
 app = FastAPI()
 
-#CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins = ["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)) -> List[Dict]:
-    suffix = ".xls"
+    # Check file type
+    if not file.filename.endswith(('.xls', '.xlsx')):
+        raise HTTPException(status_code=400, detail="File must be an Excel file (.xls or .xlsx)")
+    
+    # Determine suffix based on file extension
+    suffix = ".xlsx" if file.filename.endswith('.xlsx') else ".xls"
+    
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(await file.read())
+        content = await file.read()
+        tmp.write(content)
         tmp_path = tmp.name
-
+        
         try:
             df = pd.read_excel(tmp_path)
-
             bookings = []
             for _, row in df.iterrows():
                 bookings.append({
@@ -33,8 +29,9 @@ async def upload_file(file: UploadFile = File(...)) -> List[Dict]:
                     "numberOfGuests": int(row["Adulti"]) if not pd.isna(row["Adulti"]) else 0,
                     "numberOfNights": int(row["Durata (notti)"]) if not pd.isna(row["Durata (notti)"]) else 0
                 })
-
             return bookings
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Error processing Excel file: {str(e)}")
         finally:
             os.unlink(tmp_path)
 

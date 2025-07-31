@@ -24,11 +24,16 @@ async def upload_file(file: UploadFile = File(...)) -> List[Dict]:
             df = pd.read_excel(tmp_path)
             bookings = []
             for _, row in df.iterrows():
+                # If "Adulti" is empty, take number of guests from "Persone"
                 number_of_guests = (
                     int(row["Adulti"]) if not pd.isna(row.get("Adulti"))
                     else int(row["Persone"]) if not pd.isna(row.get("Persone"))
                     else None
                 )
+
+                # Skip cancelled bookings
+                if not pd.isna(row.get("Data di cancellazione")):
+                    continue
 
                 bookings.append({
                     "date": pd.to_datetime(row["Arrivo"]).strftime("%Y-%m-%d") if not pd.isna(row["Arrivo"]) else None,
